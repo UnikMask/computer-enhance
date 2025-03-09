@@ -76,12 +76,12 @@ fn get_rm_code(rm: u8, wide: bool, r#mod: u8, f: &mut File) -> String {
             get_rm_code_with_offset(rm, u16::from(offset[0]) + (u16::from(offset[1]) << 8))
         }
         0b00 => match rm {
-            0 => "(BX)+(SI)".to_string(),
-            1 => "(BX)+(DI)".to_string(),
-            2 => "(BP)+(SI)".to_string(),
-            3 => "(BP)+(DI)".to_string(),
-            4 => "(SI)".to_string(),
-            5 => "(DI)".to_string(),
+            0 => "(bx)+(si)".to_string(),
+            1 => "(bx)+(di)".to_string(),
+            2 => "(bp)+(si)".to_string(),
+            3 => "(bp)+(di)".to_string(),
+            4 => "(si)".to_string(),
+            5 => "(di)".to_string(),
             6 => {
                 let mut address: [u8; 2] = [0; 2];
                 assert!(
@@ -90,7 +90,7 @@ fn get_rm_code(rm: u8, wide: bool, r#mod: u8, f: &mut File) -> String {
                 );
                 format!("{:x}", u16::from(address[0]) + (u16::from(address[1]) << 8))
             }
-            7 => "(BX)+(SI)".to_string(),
+            7 => "(bx)+(si)".to_string(),
             _ => panic!("Impossible!"),
         },
         _ => panic!("Impossible!"),
@@ -99,14 +99,14 @@ fn get_rm_code(rm: u8, wide: bool, r#mod: u8, f: &mut File) -> String {
 
 fn get_rm_code_with_offset(rm: u8, offset: u16) -> String {
     match rm {
-        0 => format!("(BX)+(SI)+{offset:x}"),
-        1 => format!("(BX)+(DI)+{offset:x}"),
-        2 => format!("(BP)+(SI)+{offset:x}"),
-        3 => format!("(BP)+(DI)+{offset:x}"),
-        4 => format!("(SI)+{offset:x}"),
-        5 => format!("(DI)+{offset:x}"),
-        6 => format!("(BP)+{offset:x}"),
-        7 => format!("(BX)+{offset:x}"),
+        0 => format!("(bx)+(si)+{offset:x}"),
+        1 => format!("(bx)+(di)+{offset:x}"),
+        2 => format!("(bp)+(si)+{offset:x}"),
+        3 => format!("(bp)+(di)+{offset:x}"),
+        4 => format!("(si)+{offset:x}"),
+        5 => format!("(di)+{offset:x}"),
+        6 => format!("(bp)+{offset:x}"),
+        7 => format!("(bx)+{offset:x}"),
         _ => panic!("Impossible!"),
     }
 }
@@ -114,22 +114,22 @@ fn get_rm_code_with_offset(rm: u8, offset: u16) -> String {
 /// Assumes MOD == 11
 fn get_reg_code(instr: u8, wide: bool) -> &'static str {
     match (wide, instr) {
-        (true, 0) => "AX",
-        (true, 1) => "CX",
-        (true, 2) => "DX",
-        (true, 3) => "BX",
-        (true, 4) => "SP",
-        (true, 5) => "BP",
-        (true, 6) => "SI",
-        (true, 7) => "DI",
-        (false, 0) => "AL",
-        (false, 1) => "CL",
-        (false, 2) => "DL",
-        (false, 3) => "BL",
-        (false, 4) => "AH",
-        (false, 5) => "CH",
-        (false, 6) => "DH",
-        (false, 7) => "BH",
+        (true, 0) => "ax",
+        (true, 1) => "cx",
+        (true, 2) => "dx",
+        (true, 3) => "bx",
+        (true, 4) => "sp",
+        (true, 5) => "bp",
+        (true, 6) => "si",
+        (true, 7) => "di",
+        (false, 0) => "al",
+        (false, 1) => "cl",
+        (false, 2) => "dl",
+        (false, 3) => "bl",
+        (false, 4) => "ah",
+        (false, 5) => "ch",
+        (false, 6) => "dh",
+        (false, 7) => "bh",
         _ => panic!("Impossible!"),
     }
 }
