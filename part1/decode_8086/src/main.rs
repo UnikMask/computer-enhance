@@ -87,21 +87,21 @@ fn get_rm_code(rm: u8, wide: bool, r#mod: u8, f: &mut File) -> String {
             get_rm_code_with_offset(rm, u16::from(offset[0]) + (u16::from(offset[1]) << 8))
         }
         0b00 => match rm {
-            0 => "(bx)+(si)".to_string(),
-            1 => "(bx)+(di)".to_string(),
-            2 => "(bp)+(si)".to_string(),
-            3 => "(bp)+(di)".to_string(),
-            4 => "(si)".to_string(),
-            5 => "(di)".to_string(),
+            0 => "[bx + si]".to_string(),
+            1 => "[bx + di]".to_string(),
+            2 => "[bp + si]".to_string(),
+            3 => "[bp + di]".to_string(),
+            4 => "[si]".to_string(),
+            5 => "[di]".to_string(),
             6 => {
                 let mut address: [u8; 2] = [0; 2];
                 assert!(
                     matches!(f.read(&mut address), Ok(2)),
                     "Could not read next byte!"
                 );
-                format!("{:x}", u16::from(address[0]) + (u16::from(address[1]) << 8))
+                format!("[{:x}]", u16::from(address[0]) + (u16::from(address[1]) << 8))
             }
-            7 => "(bx)+(si)".to_string(),
+            7 => "[bx + si]".to_string(),
             _ => panic!("Impossible!"),
         },
         _ => panic!("Impossible!"),
@@ -110,14 +110,14 @@ fn get_rm_code(rm: u8, wide: bool, r#mod: u8, f: &mut File) -> String {
 
 fn get_rm_code_with_offset(rm: u8, offset: u16) -> String {
     match rm {
-        0 => format!("(bx)+(si)+{offset:x}"),
-        1 => format!("(bx)+(di)+{offset:x}"),
-        2 => format!("(bp)+(si)+{offset:x}"),
-        3 => format!("(bp)+(di)+{offset:x}"),
-        4 => format!("(si)+{offset:x}"),
-        5 => format!("(di)+{offset:x}"),
-        6 => format!("(bp)+{offset:x}"),
-        7 => format!("(bx)+{offset:x}"),
+        0 => format!("[bx + si + {offset:x}]"),
+        1 => format!("[bx + di + {offset:x}]"),
+        2 => format!("[bp + si + {offset:x}]"),
+        3 => format!("[bp + di + {offset:x}]"),
+        4 => format!("[si + {offset:x}]"),
+        5 => format!("[di + {offset:x}]"),
+        6 => format!("[bp + {offset:x}]"),
+        7 => format!("[bx + {offset:x}]"),
         _ => panic!("Impossible!"),
     }
 }
