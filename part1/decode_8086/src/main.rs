@@ -175,9 +175,9 @@ fn get_immediate(wide: bool, explicit: bool, f: &mut File) -> String {
         );
         (u16::from(nextb[1]) << 8) + u16::from(nextb[0])
     } else {
-        let mut nextb = [0_u8; 2];
+        let mut nextb = [0_u8; 1];
         assert!(
-            matches!(f.read(&mut nextb), Ok(2)),
+            matches!(f.read(&mut nextb), Ok(1)),
             "Could not read next bytes!"
         );
         u16::from(nextb[0])
