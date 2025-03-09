@@ -47,7 +47,6 @@ fn main() {
                 let (src, dst) = if d { (rm, reg) } else { (reg, rm) };
                 println!("mov {dst}, {src}")
             }
-
             // Immediate register to memory
             _ if instr >> 1 == 0b1100011 => {
                 let w = bytes[0] & 1 == 1;
@@ -72,6 +71,7 @@ fn main() {
                     get_immediate(w, false, &mut f)
                 );
             }
+            // Memory to accumulator
             _ if instr >> 1 == 0b1010000 => {
                 let w = bytes[0] & 1 == 1;
                 println!(
@@ -80,6 +80,7 @@ fn main() {
                     get_direct_memory(&mut f)
                 );
             }
+            // Accumulator to memory
             _ if instr >> 1 == 0b1010001 => {
                 let w = bytes[0] & 1 == 1;
                 println!(
