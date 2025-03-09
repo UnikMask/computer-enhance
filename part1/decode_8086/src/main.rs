@@ -51,15 +51,16 @@ fn main() {
             // Immediate register to memory
             _ if instr >> 1 == 0b1100011 => {
                 let w = bytes[0] == 1;
-                let mut nextb = [0_u8; 3];
+                let mut nextb = [0_u8; 1];
                 assert!(
-                    matches!(f.read(&mut nextb), Ok(3)),
+                    matches!(f.read(&mut nextb), Ok(1)),
                     "Could not read next bytes!"
                 );
-                let immediate = u16::from(nextb[0]) + (u16::from(nextb[1]) << 8);
+                let r#mod = nextb[0] >> 6;
                 println!(
-                    "mov {}, {immediate}",
-                    get_rm_code(nextb[0] & 0b111, w, nextb[0] >> 5, &mut f)
+                    "mov {}, {}",
+                    get_rm_code(nextb[0] & 0b111, w, r#mod, &mut f),
+                    get_immediate(w, r#mod != 0b11, &mut f)
                 );
             }
             _ => panic!("Not supported yet!"),
@@ -122,7 +123,6 @@ fn get_rm_code_with_offset(rm: u8, offset: u16) -> String {
     }
 }
 
-/// Assumes MOD == 11
 fn get_reg_code(instr: u8, wide: bool) -> &'static str {
     match (wide, instr) {
         (true, 0) => "ax",
@@ -142,5 +142,28 @@ fn get_reg_code(instr: u8, wide: bool) -> &'static str {
         (false, 6) => "dh",
         (false, 7) => "bh",
         _ => panic!("Impossible!"),
+    }
+}
+
+fn get_immediate(wide: bool, explicit: bool, f: &mut File) -> String {
+    let immediate = if wide {
+        let mut nextb = [0_u8; 2];
+        assert!(
+            matches!(f.read(&mut nextb), Ok(2)),
+            "Could not read next bytes!"
+        );
+        (u16::from(nextb[1]) << 8) + u16::from(nextb[0])
+    } else {
+        let mut nextb = [0_u8; 2];
+        assert!(
+            matches!(f.read(&mut nextb), Ok(2)),
+            "Could not read next bytes!"
+        );
+        u16::from(nextb[0])
+    };
+    if explicit {
+        format!("{} {immediate}", if wide { "word" } else { "byte"} )
+    } else {
+        format!("{}", immediate)
     }
 }
