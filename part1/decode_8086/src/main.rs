@@ -63,6 +63,14 @@ fn main() {
                     get_immediate(w, r#mod != 0b11, &mut f)
                 );
             }
+            _ if instr >> 4 == 0b1011 => {
+                let (w, reg) = (bytes[0] >> 3 == 1, bytes[0] & 0b111);
+                println!(
+                    "mov {}, {}",
+                    get_reg_code(reg, w),
+                    get_immediate(w, false, &mut f)
+                );
+            }
             _ => panic!("Not supported yet!"),
         }
     }
@@ -100,7 +108,10 @@ fn get_rm_code(rm: u8, wide: bool, r#mod: u8, f: &mut File) -> String {
                     matches!(f.read(&mut address), Ok(2)),
                     "Could not read next byte!"
                 );
-                format!("[{:x}]", u16::from(address[0]) + (u16::from(address[1]) << 8))
+                format!(
+                    "[{:x}]",
+                    u16::from(address[0]) + (u16::from(address[1]) << 8)
+                )
             }
             7 => "[bx + si]".to_string(),
             _ => panic!("Impossible!"),
@@ -162,7 +173,7 @@ fn get_immediate(wide: bool, explicit: bool, f: &mut File) -> String {
         u16::from(nextb[0])
     };
     if explicit {
-        format!("{} {immediate}", if wide { "word" } else { "byte"} )
+        format!("{} {immediate}", if wide { "word" } else { "byte" })
     } else {
         format!("{}", immediate)
     }
