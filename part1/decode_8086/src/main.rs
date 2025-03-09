@@ -71,12 +71,20 @@ fn main() {
                     get_immediate(w, false, &mut f)
                 );
             }
-            _ if instr >> 1 == 0b101000 => {
+            _ if instr >> 1 == 0b1010000 => {
                 let w = bytes[0] & 1 == 1;
                 println!(
                     "mov {}, {}",
                     if w { "ax" } else { "al" },
                     get_direct_memory(&mut f)
+                );
+            }
+            _ if instr >> 1 == 0b1010001 => {
+                let w = bytes[0] & 1 == 1;
+                println!(
+                    "mov {}, {}",
+                    get_direct_memory(&mut f),
+                    if w { "ax" } else { "al" }
                 );
             }
             _ => panic!("Not supported yet!"),
