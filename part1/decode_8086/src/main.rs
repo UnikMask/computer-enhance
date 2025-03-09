@@ -128,14 +128,14 @@ fn get_rm_code(rm: u8, wide: bool, r#mod: u8, f: &mut File) -> String {
 
 fn get_rm_code_with_offset(rm: u8, offset: u16) -> String {
     match rm {
-        0 => format!("[bx + si + {offset:x}]"),
-        1 => format!("[bx + di + {offset:x}]"),
-        2 => format!("[bp + si + {offset:x}]"),
-        3 => format!("[bp + di + {offset:x}]"),
-        4 => format!("[si + {offset:x}]"),
-        5 => format!("[di + {offset:x}]"),
-        6 => format!("[bp + {offset:x}]"),
-        7 => format!("[bx + {offset:x}]"),
+        0 => format!("[bx + si + {offset}]"),
+        1 => format!("[bx + di + {offset}]"),
+        2 => format!("[bp + si + {offset}]"),
+        3 => format!("[bp + di + {offset}]"),
+        4 => format!("[si + {offset}]"),
+        5 => format!("[di + {offset}]"),
+        6 => format!("[bp + {offset}]"),
+        7 => format!("[bx + {offset}]"),
         _ => panic!("Impossible!"),
     }
 }
@@ -169,7 +169,7 @@ fn get_direct_memory(f: &mut File) -> String {
         "Could not read next byte!"
     );
     format!(
-        "[{:x}]",
+        "[{}]",
         u16::from(address[0]) + (u16::from(address[1]) << 8)
     )
 }
