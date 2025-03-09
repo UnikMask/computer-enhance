@@ -39,13 +39,13 @@ fn main() {
 
         let (src, dst) = if d {
             (
-                get_reg_code(reg, w).to_owned(),
                 get_rm_code(rm, w, r#mod, &mut f),
+                get_reg_code(reg, w).to_owned(),
             )
         } else {
             (
-                get_rm_code(rm, w, r#mod, &mut f),
                 get_reg_code(reg, w).to_owned(),
+                get_rm_code(rm, w, r#mod, &mut f),
             )
         };
 
