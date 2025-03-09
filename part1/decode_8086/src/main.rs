@@ -24,74 +24,103 @@ fn main() {
                 continue;
             }
         }
-
-        // Split 1st byte
-        let instr = bytes[0];
-        match instr {
-            // Register/memory to register/memory
-            _ if instr >> 2 == 0b100010 => {
-                let (d, w) = (((bytes[0] >> 1) & 1) == 1, (bytes[0] & 1) == 1);
-
-                // Split 2nd byte
-                let mut regrm = [0_u8; 1];
-                assert!(
-                    matches!(f.read(&mut regrm), Ok(1)),
-                    "Could not read next byte!"
-                );
-                let (r#mod, reg, rm) = (regrm[0] >> 6, (regrm[0] >> 3) & 0b111, regrm[0] & 0b111);
-                let (reg, rm) = (
-                    get_reg_code(reg, w).to_owned(),
-                    get_rm_code(rm, w, r#mod, &mut f),
-                );
-
-                let (src, dst) = if d { (rm, reg) } else { (reg, rm) };
-                println!("mov {dst}, {src}")
-            }
-            // Immediate register to memory
-            _ if instr >> 1 == 0b1100011 => {
-                let w = bytes[0] & 1 == 1;
-                let mut nextb = [0_u8; 1];
-                assert!(
-                    matches!(f.read(&mut nextb), Ok(1)),
-                    "Could not read next bytes!"
-                );
-                let r#mod = nextb[0] >> 6;
-                println!(
-                    "mov {}, {}",
-                    get_rm_code(nextb[0] & 0b111, w, r#mod, &mut f),
-                    get_immediate(w, r#mod != 0b11, &mut f)
-                );
-            }
-            // Immediate to register
-            _ if instr >> 4 == 0b1011 => {
-                let (w, reg) = ((bytes[0] >> 3) & 1 == 1, bytes[0] & 0b111);
-                println!(
-                    "mov {}, {}",
-                    get_reg_code(reg, w),
-                    get_immediate(w, false, &mut f)
-                );
-            }
-            // Memory to accumulator
-            _ if instr >> 1 == 0b1010000 => {
-                let w = bytes[0] & 1 == 1;
-                println!(
-                    "mov {}, {}",
-                    if w { "ax" } else { "al" },
-                    get_direct_memory(&mut f)
-                );
-            }
-            // Accumulator to memory
-            _ if instr >> 1 == 0b1010001 => {
-                let w = bytes[0] & 1 == 1;
-                println!(
-                    "mov {}, {}",
-                    get_direct_memory(&mut f),
-                    if w { "ax" } else { "al" }
-                );
-            }
-            _ => panic!("Not supported yet!"),
-        }
+        println!("{}", base_8086_instr_read(bytes[0], &mut f));
     }
+}
+
+fn base_8086_instr_read(byte: u8, f: &mut File) -> String {
+    match byte >> 5 {
+        0b100 => match (byte >> 3) & 0b11 {
+            0b01 => {
+                if (byte >> 2) & 1 == 1 {
+                    panic!("Not implemented!")
+                } else {
+                    register_mem_to_register_mem(byte, f)
+                }
+            }
+            _ => panic!("Not implemented!"),
+        },
+        0b101 => {
+            if (byte >> 4) & 1 == 1 {
+                immediate_to_register(byte, f)
+            } else {
+                match (byte >> 1) & 0b111 {
+                    0b000 => memory_to_accumulator(byte, f),
+                    0b001 => accumulator_to_memory(byte, f),
+                    _ => panic!("Not supported!"),
+                }
+            }
+        }
+        0b110 => match (byte >> 3) & 0b11 {
+            0b00 => match (byte >> 1) & 0b11 {
+                0b11 => immediate_to_register_memory(byte, f),
+                _ => panic!("Not implemented!"),
+            },
+            _ => panic!("Not implemented!"),
+        },
+        _ => panic!("Impossible!"),
+    }
+}
+
+fn register_mem_to_register_mem(byte: u8, f: &mut File) -> String {
+    let (d, w) = (((byte >> 1) & 1) == 1, (byte & 1) == 1);
+
+    // Split 2nd byte
+    let mut regrm = [0_u8; 1];
+    assert!(
+        matches!(f.read(&mut regrm), Ok(1)),
+        "Could not read next byte!"
+    );
+    let (r#mod, reg, rm) = (regrm[0] >> 6, (regrm[0] >> 3) & 0b111, regrm[0] & 0b111);
+    let (reg, rm) = (
+        get_reg_code(reg, w).to_owned(),
+        get_rm_code(rm, w, r#mod, f),
+    );
+
+    let (src, dst) = if d { (rm, reg) } else { (reg, rm) };
+    format!("mov {dst}, {src}")
+}
+
+fn immediate_to_register(byte: u8, f: &mut File) -> String {
+    let (w, reg) = ((byte >> 3) & 1 == 1, byte & 0b111);
+    format!(
+        "mov {}, {}",
+        get_reg_code(reg, w),
+        get_immediate(w, false, f)
+    )
+}
+
+fn immediate_to_register_memory(byte: u8, f: &mut File) -> String {
+    let w = byte & 1 == 1;
+    let mut nextb = [0_u8; 1];
+    assert!(
+        matches!(f.read(&mut nextb), Ok(1)),
+        "Could not read next bytes!"
+    );
+    let r#mod = nextb[0] >> 6;
+    format!(
+        "mov {}, {}",
+        get_rm_code(nextb[0] & 0b111, w, r#mod, f),
+        get_immediate(w, r#mod != 0b11, f)
+    )
+}
+
+fn memory_to_accumulator(byte: u8, f: &mut File) -> String {
+    let w = byte & 1 == 1;
+    format!(
+        "mov {}, {}",
+        if w { "ax" } else { "al" },
+        get_direct_memory(f)
+    )
+}
+
+fn accumulator_to_memory(byte: u8, f: &mut File) -> String {
+    let w = byte & 1 == 1;
+    format!(
+        "mov {}, {}",
+        get_direct_memory(f),
+        if w { "ax" } else { "al" }
+    )
 }
 
 fn get_rm_code(rm: u8, wide: bool, r#mod: u8, f: &mut File) -> String {
@@ -170,10 +199,7 @@ fn get_direct_memory(f: &mut File) -> String {
         matches!(f.read(&mut address), Ok(2)),
         "Could not read next byte!"
     );
-    format!(
-        "[{}]",
-        u16::from(address[0]) + (u16::from(address[1]) << 8)
-    )
+    format!("[{}]", u16::from(address[0]) + (u16::from(address[1]) << 8))
 }
 
 fn get_immediate(wide: bool, explicit: bool, f: &mut File) -> String {
