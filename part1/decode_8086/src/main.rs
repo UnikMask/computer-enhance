@@ -50,7 +50,7 @@ fn main() {
 
             // Immediate register to memory
             _ if instr >> 1 == 0b1100011 => {
-                let w = bytes[0] == 1;
+                let w = bytes[0] & 1 == 1;
                 let mut nextb = [0_u8; 1];
                 assert!(
                     matches!(f.read(&mut nextb), Ok(1)),
@@ -63,8 +63,9 @@ fn main() {
                     get_immediate(w, r#mod != 0b11, &mut f)
                 );
             }
+            // Immediate to register
             _ if instr >> 4 == 0b1011 => {
-                let (w, reg) = (bytes[0] >> 3 == 1, bytes[0] & 0b111);
+                let (w, reg) = ((bytes[0] >> 3) & 1 == 1, bytes[0] & 0b111);
                 println!(
                     "mov {}, {}",
                     get_reg_code(reg, w),
