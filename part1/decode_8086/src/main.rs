@@ -71,6 +71,14 @@ fn main() {
                     get_immediate(w, false, &mut f)
                 );
             }
+            _ if instr >> 1 == 0b101000 => {
+                let w = bytes[0] & 1 == 1;
+                println!(
+                    "mov {}, {}",
+                    if w { "ax" } else { "al" },
+                    get_direct_memory(&mut f)
+                );
+            }
             _ => panic!("Not supported yet!"),
         }
     }
@@ -102,17 +110,7 @@ fn get_rm_code(rm: u8, wide: bool, r#mod: u8, f: &mut File) -> String {
             3 => "[bp + di]".to_string(),
             4 => "[si]".to_string(),
             5 => "[di]".to_string(),
-            6 => {
-                let mut address: [u8; 2] = [0; 2];
-                assert!(
-                    matches!(f.read(&mut address), Ok(2)),
-                    "Could not read next byte!"
-                );
-                format!(
-                    "[{:x}]",
-                    u16::from(address[0]) + (u16::from(address[1]) << 8)
-                )
-            }
+            6 => get_direct_memory(f),
             7 => "[bx + si]".to_string(),
             _ => panic!("Impossible!"),
         },
@@ -154,6 +152,18 @@ fn get_reg_code(instr: u8, wide: bool) -> &'static str {
         (false, 7) => "bh",
         _ => panic!("Impossible!"),
     }
+}
+
+fn get_direct_memory(f: &mut File) -> String {
+    let mut address: [u8; 2] = [0; 2];
+    assert!(
+        matches!(f.read(&mut address), Ok(2)),
+        "Could not read next byte!"
+    );
+    format!(
+        "[{:x}]",
+        u16::from(address[0]) + (u16::from(address[1]) << 8)
+    )
 }
 
 fn get_immediate(wide: bool, explicit: bool, f: &mut File) -> String {
