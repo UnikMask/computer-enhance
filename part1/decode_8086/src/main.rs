@@ -13,7 +13,7 @@ fn main() {
     };
 
     let mut done = false;
-    println!("bits 16\n");
+    println!("bits 16");
     while !done {
         let mut bytes: [u8; BASE_INSTR_SIZE] = [0; BASE_INSTR_SIZE];
 
