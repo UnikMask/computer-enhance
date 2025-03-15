@@ -109,6 +109,51 @@ fn accumulator_to_memory(byte: u8, f: &mut File) -> String {
     )
 }
 
+fn add_rm_to_rm(byte: u8, f: &mut File) -> String {
+    let (dst, src) = register_mem_to_register_mem(byte, f);
+    format!("add {dst}, {src}")
+}
+
+fn add_imm_to_rm(byte: u8, f: &mut File) -> String {
+    let (imm, rm) = immediate_to_rm(byte, f);
+    format!("add {rm}, {imm}")
+}
+
+fn add_imm_to_acc(byte: u8, f: &mut File) -> String {
+    let (imm, acc) = immediate_to_acc(byte, f);
+    format!("add {acc}, {imm}")
+}
+
+fn sub_rm_to_rm(byte: u8, f: &mut File) -> String {
+    let (dst, src) = register_mem_to_register_mem(byte, f);
+    format!("sub {dst}, {src}")
+}
+
+fn sub_imm_to_rm(byte: u8, f: &mut File) -> String {
+    let (imm, rm) = immediate_to_rm(byte, f);
+    format!("sub {rm}, {imm}")
+}
+
+fn sub_imm_to_acc(byte: u8, f: &mut File) -> String {
+    let (imm, acc) = immediate_to_acc(byte, f);
+    format!("sub {acc}, {imm}")
+}
+
+fn cmp_rm_to_rm(byte: u8, f: &mut File) -> String {
+    let (dst, src) = register_mem_to_register_mem(byte, f);
+    format!("cmp {dst}, {src}")
+}
+
+fn cmp_imm_to_rm(byte: u8, f: &mut File) -> String {
+    let (imm, rm) = immediate_to_rm(byte, f);
+    format!("cmp {rm}, {imm}")
+}
+
+fn cmp_imm_to_acc(byte: u8, f: &mut File) -> String {
+    let (imm, acc) = immediate_to_acc(byte, f);
+    format!("cmp {acc}, {imm}")
+}
+
 ////////////////////////////////////////
 // Common operations for instructions //
 ////////////////////////////////////////
@@ -245,7 +290,12 @@ fn immediate_to_rm(byte: u8, f: &mut File) -> (String, String) {
     );
     let r#mod = nextb[0] >> 6;
     (
-        get_rm_code(nextb[0] & 0b111, sw == 1, r#mod, f),
         get_immediate(sw, r#mod != 0b11, f),
+        get_rm_code(nextb[0] & 0b111, sw == 1, r#mod, f),
     )
+}
+
+fn immediate_to_acc(byte: u8, f: &mut File) -> (String, &str) {
+    let w = byte & 1;
+    (get_immediate(w, false, f), if w == 1 { "ax" } else { "al" })
 }
