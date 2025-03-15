@@ -38,6 +38,23 @@ fn base_8086_instr_read(byte: u8, f: &mut File) -> String {
                     mov_rm_to_rm(byte, f)
                 }
             }
+            0b00 => {
+                if (byte >> 2) & 1 == 1 {
+                    let mut nextb = [0_u8; 1];
+                    assert!(
+                        matches!(f.read(&mut nextb), Ok(1)),
+                        "Could not read next bytes!"
+                    );
+                    match (nextb[0] >> 3) & 0b111 {
+                        0b000 => add_imm_to_rm(byte, nextb[0], f),
+                        0b101 => sub_imm_to_rm(byte, nextb[0], f),
+                        0b111 => cmp_imm_to_rm(byte, nextb[0], f),
+                        _ => panic!("Not implemented!"),
+                    }
+                } else {
+                    panic!("Not implemented!")
+                }
+            }
             _ => panic!("Not implemented!"),
         },
         0b101 => {
@@ -56,6 +73,36 @@ fn base_8086_instr_read(byte: u8, f: &mut File) -> String {
                 0b11 => mov_imm_to_rm(byte, f),
                 _ => panic!("Not implemented!"),
             },
+            _ => panic!("Not implemented!"),
+        },
+        0b000 => match (byte >> 2) & 0b111 {
+            0b000 => add_rm_to_rm(byte, f),
+            0b001 => {
+                if byte >> 1 == 1 {
+                    panic!("Not implemented!")
+                } else {
+                    add_imm_to_acc(byte, f)
+                }
+            }
+            _ => panic!("Not implemented!"),
+        },
+        0b001 => match (byte >> 2) & 0b111 {
+            0b010 => sub_rm_to_rm(byte, f),
+            0b110 => cmp_rm_to_rm(byte, f),
+            0b011 => {
+                if byte >> 1 == 1 {
+                    panic!("Not implemented!")
+                } else {
+                    sub_imm_to_acc(byte, f)
+                }
+            }
+            0b111 => {
+                if byte >> 1 == 1 {
+                    panic!("Not implemented!")
+                } else {
+                    cmp_imm_to_acc(byte, f)
+                }
+            }
             _ => panic!("Not implemented!"),
         },
         _ => panic!("Impossible!"),
@@ -114,8 +161,8 @@ fn add_rm_to_rm(byte: u8, f: &mut File) -> String {
     format!("add {dst}, {src}")
 }
 
-fn add_imm_to_rm(byte: u8, f: &mut File) -> String {
-    let (imm, rm) = immediate_to_rm(byte, f);
+fn add_imm_to_rm(byte0: u8, byte1: u8, f: &mut File) -> String {
+    let (imm, rm) = immediate_to_rm(byte0, byte1, f);
     format!("add {rm}, {imm}")
 }
 
@@ -129,8 +176,8 @@ fn sub_rm_to_rm(byte: u8, f: &mut File) -> String {
     format!("sub {dst}, {src}")
 }
 
-fn sub_imm_to_rm(byte: u8, f: &mut File) -> String {
-    let (imm, rm) = immediate_to_rm(byte, f);
+fn sub_imm_to_rm(byte0: u8, byte1: u8, f: &mut File) -> String {
+    let (imm, rm) = immediate_to_rm(byte0, byte1, f);
     format!("sub {rm}, {imm}")
 }
 
@@ -144,8 +191,8 @@ fn cmp_rm_to_rm(byte: u8, f: &mut File) -> String {
     format!("cmp {dst}, {src}")
 }
 
-fn cmp_imm_to_rm(byte: u8, f: &mut File) -> String {
-    let (imm, rm) = immediate_to_rm(byte, f);
+fn cmp_imm_to_rm(byte0: u8, byte1: u8, f: &mut File) -> String {
+    let (imm, rm) = immediate_to_rm(byte0, byte1, f);
     format!("cmp {rm}, {imm}")
 }
 
@@ -281,17 +328,16 @@ fn immediate_to_register(byte: u8, f: &mut File) -> (String, &str) {
     (get_immediate(w, false, f), get_reg_code(reg, w == 1))
 }
 
-fn immediate_to_rm(byte: u8, f: &mut File) -> (String, String) {
-    let sw = byte & 0b11;
+fn immediate_to_rm(byte0: u8, byte1: u8, f: &mut File) -> (String, String) {
+    let sw = byte0 & 0b11;
     let mut nextb = [0_u8; 1];
     assert!(
         matches!(f.read(&mut nextb), Ok(1)),
         "Could not read next bytes!"
     );
-    let r#mod = nextb[0] >> 6;
     (
-        get_immediate(sw, r#mod != 0b11, f),
-        get_rm_code(nextb[0] & 0b111, sw == 1, r#mod, f),
+        get_immediate(sw, (byte1 >> 6) != 0b11, f),
+        get_rm_code(byte1 & 0b111, sw == 1, byte1 >> 6, f),
     )
 }
 
