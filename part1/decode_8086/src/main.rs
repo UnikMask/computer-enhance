@@ -24,18 +24,23 @@ fn main() {
                 continue;
             }
         }
-        println!("{}", base_8086_instr_read(bytes[0], &mut f));
+        println!(
+            "{}",
+            base_8086_instr_read(bytes[0], &mut f)
+                .or_else(|| jump_read(bytes[0], &mut f))
+                .expect("Not implemented!")
+        );
     }
 }
 
-fn base_8086_instr_read(byte: u8, f: &mut File) -> String {
+fn base_8086_instr_read(byte: u8, f: &mut File) -> Option<String> {
     match byte >> 5 {
         0b100 => match (byte >> 3) & 0b11 {
             0b01 => {
                 if (byte >> 2) & 1 == 1 {
-                    panic!("Not implemented!")
+                    None
                 } else {
-                    mov_rm_to_rm(byte, f)
+                    Some(mov_rm_to_rm(byte, f))
                 }
             }
             0b00 => {
@@ -46,72 +51,103 @@ fn base_8086_instr_read(byte: u8, f: &mut File) -> String {
                         "Could not read next bytes!"
                     );
                     match (nextb[0] >> 3) & 0b111 {
-                        0b000 => add_imm_to_rm(byte, nextb[0], f),
-                        0b101 => sub_imm_to_rm(byte, nextb[0], f),
-                        0b111 => cmp_imm_to_rm(byte, nextb[0], f),
-                        _ => panic!("Not implemented!"),
+                        0b000 => Some(add_imm_to_rm(byte, nextb[0], f)),
+                        0b101 => Some(sub_imm_to_rm(byte, nextb[0], f)),
+                        0b111 => Some(cmp_imm_to_rm(byte, nextb[0], f)),
+                        _ => None,
                     }
                 } else {
-                    panic!("Not implemented!")
+                    None
                 }
             }
-            _ => panic!("Not implemented!"),
+            _ => None,
         },
         0b101 => {
             if (byte >> 4) & 1 == 1 {
-                mov_immediate_to_register(byte, f)
+                Some(mov_immediate_to_register(byte, f))
             } else {
                 match (byte >> 1) & 0b111 {
-                    0b000 => memory_to_accumulator(byte, f),
-                    0b001 => accumulator_to_memory(byte, f),
+                    0b000 => Some(memory_to_accumulator(byte, f)),
+                    0b001 => Some(accumulator_to_memory(byte, f)),
                     _ => panic!("Not supported!"),
                 }
             }
         }
         0b110 => match (byte >> 3) & 0b11 {
             0b00 => match (byte >> 1) & 0b11 {
-                0b11 => mov_imm_to_rm(byte, f),
-                _ => panic!("Not implemented!"),
+                0b11 => Some(mov_imm_to_rm(byte, f)),
+                _ => None,
             },
-            _ => panic!("Not implemented!"),
+            _ => None,
         },
         0b000 => match (byte >> 2) & 0b111 {
-            0b000 => add_rm_to_rm(byte, f),
+            0b000 => Some(add_rm_to_rm(byte, f)),
             0b001 => {
                 if byte >> 1 == 1 {
-                    panic!("Not implemented!")
+                    None
                 } else {
-                    add_imm_to_acc(byte, f)
+                    Some(add_imm_to_acc(byte, f))
                 }
             }
-            _ => panic!("Not implemented!"),
+            _ => None,
         },
         0b001 => match (byte >> 2) & 0b111 {
-            0b010 => sub_rm_to_rm(byte, f),
-            0b110 => cmp_rm_to_rm(byte, f),
+            0b010 => Some(sub_rm_to_rm(byte, f)),
+            0b110 => Some(cmp_rm_to_rm(byte, f)),
             0b011 => {
                 if byte >> 1 == 1 {
-                    panic!("Not implemented!")
+                    None
                 } else {
-                    sub_imm_to_acc(byte, f)
+                    Some(sub_imm_to_acc(byte, f))
                 }
             }
             0b111 => {
                 if byte >> 1 == 1 {
-                    panic!("Not implemented!")
+                    None
                 } else {
-                    cmp_imm_to_acc(byte, f)
+                    Some(cmp_imm_to_acc(byte, f))
                 }
             }
-            _ => panic!("Not implemented!"),
+            _ => None,
         },
-        _ => panic!("Impossible!"),
+        _ => None,
+    }
+}
+
+fn jump_read(byte: u8, f: &mut File) -> Option<String> {
+    match byte {
+        0b01110100 => Some(cond_jmp("je", f)),
+        0b01111100 => Some(cond_jmp("jl", f)),
+        0b01111110 => Some(cond_jmp("jle", f)),
+        0b01110010 => Some(cond_jmp("jb", f)),
+        0b01110110 => Some(cond_jmp("jbe", f)),
+        0b01111010 => Some(cond_jmp("jp", f)),
+        0b01110000 => Some(cond_jmp("jo", f)),
+        0b01111000 => Some(cond_jmp("js", f)),
+        0b01110101 => Some(cond_jmp("jne", f)),
+        0b01111101 => Some(cond_jmp("jnl", f)),
+        0b01111111 => Some(cond_jmp("jnle", f)),
+        0b01110011 => Some(cond_jmp("jnb", f)),
+        0b01110111 => Some(cond_jmp("jnbe", f)),
+        0b01111011 => Some(cond_jmp("jnp", f)),
+        0b01110001 => Some(cond_jmp("jno", f)),
+        _ => None
     }
 }
 
 //////////////////
 // Instructions //
 //////////////////
+
+
+fn cond_jmp(instr: &str, f: &mut File) -> String {
+    let mut nextb = [0_u8; 1];
+    assert!(
+        matches!(f.read(&mut nextb), Ok(1)),
+        "Could not read next bytes!"
+    );
+    format!("{instr} {}", nextb[0] as i8)
+}
 
 fn mov_rm_to_rm(byte: u8, f: &mut File) -> String {
     let (dst, src) = register_mem_to_register_mem(byte, f);
@@ -258,7 +294,7 @@ fn get_rm_code(rm: u8, wide: bool, r#mod: u8, f: &mut File) -> String {
             7 => "[bx + si]".to_string(),
             _ => panic!("Impossible!"),
         },
-        _ => panic!("Impossible!"),
+        _ =>  panic!("Impossible!"),
     }
 }
 
