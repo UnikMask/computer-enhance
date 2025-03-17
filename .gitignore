@@ -2,3 +2,4 @@
 **/results/*
 **/examples/*
 !**/examples/*.asm
+rusty-tags.vi
